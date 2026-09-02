@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wyze Add-ons Kahoot-Style Challenge!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Base Styles - Kahoot Vibe */
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f2f2f2;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Screen Management */
+        .screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .screen.active {
+            display: flex;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Start Screen */
+        #start-screen {
+            background-color: #46178f; /* Kahoot Purple */
+            color: white;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 50px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .name-input {
+            padding: 15px 25px;
+            font-size: 20px;
+            border-radius: 8px;
+            border: 2px solid #ccc;
+            outline: none;
+            text-align: center;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            width: 280px;
+        }
+
+        .btn-start {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 22px;
+            font-weight: 800;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #000;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .btn-start:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #000;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: #fff;
+            border: 2px solid white;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 20px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        /* Quiz Header (Top Bar) */
+        .quiz-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: fixed;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .question-counter {
+            font-size: 20px;
+            font-weight: 700;
+            color: #666;
+        }
+
+        .score-display {
+            font-size: 24px;
+            font-weight: 800;
+            color: #333;
+            background-color: #f2f2f2;
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        /* Timer Circle */
+        .timer-container {
+            position: relative;
+            width: 60px;
+            height: 60px;
+        }
+
+        .timer-circle {
+            transform: rotate(-90deg);
+            width: 60px;
+            height: 60px;
+        }
+
+        .timer-circle circle {
+            fill: none;
+            stroke-width: 6;
+            stroke-linecap: round;
+        }
+
+        .timer-bg {
+            stroke: #e0e0e0;
+        }
+
+        .timer-prog {
+            stroke: #864cbf;
+            stroke-dasharray: 163;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 1s linear, stroke 0.3s;
+        }
+
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            font-weight: 800;
+            color: #333;
+        }
+
+        .timer-urgent .timer-prog { stroke: #ff3355; }
+        .timer-urgent .timer-text {
+            color: #ff3355;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Question Container Area */
+        #quiz-screen {
+            background-color: #f2f2f2;
+            padding-top: 100px;
+            justify-content: flex-start;
+        }
+
+        .question-card {
+            background-color: white;
+            width: 100%;
+            max-width: 900px;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .question-text {
+            font-size: 32px;
+            font-weight: 800;
+            color: #333;
+            margin: 0;
+            line-height: 1.3;
+        }
+
+        /* Answer Grid */
+        .answers-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .answers-grid { grid-template-columns: 1fr; }
+        }
+
+        .answer-btn {
+            border: none;
+            border-radius: 4px;
+            padding: 30px 20px;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+            transition: transform 0.1s, box-shadow 0.1s, filter 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+            min-height: 120px;
+            word-wrap: break-word;
+            text-align: left;
+        }
+
+        .answer-btn:active:not(:disabled) {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.2);
+        }
+
+        .answer-btn:disabled { cursor: default; }
+
+        .btn-color-0 { background-color: #e21b3c; }
+        .btn-color-1 { background-color: #1368ce; }
+        .btn-color-2 { background-color: #d89e00; }
+        .btn-color-3 { background-color: #26890c; }
+
+        .shape-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 20px;
+            background-color: white;
+            flex-shrink: 0;
+        }
+        .shape-0 { clip-path: polygon(50% 0%, 0% 100%, 100% 100%); }
+        .shape-1 { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+        .shape-2 { border-radius: 50%; }
+
+        /* Feedback Overlay */
+        #feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #feedback-overlay.correct-bg { background-color: #66bf39; }
+        #feedback-overlay.incorrect-bg { background-color: #ff3355; }
+        #feedback-overlay.time-up-bg { background-color: #ffb100; }
+
+        .feedback-title {
+            font-size: 60px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .feedback-score {
+            font-size: 30px;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 30px;
+            border-radius: 30px;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+
+        .feedback-rationale {
+            font-size: 22px;
+            max-width: 800px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            line-height: 1.4;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            margin-bottom: 40px;
+        }
+
+        .btn-next {
+            background-color: rgba(0,0,0,0.3);
+            color: white;
+            border: 2px solid white;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: 800;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+
+        /* Results Screen */
+        #results-screen {
+            background-color: #46178f;
+            color: white;
+            text-align: center;
+        }
+
+        .status-badge {
+            font-size: 28px;
+            font-weight: 900;
+            padding: 10px 30px;
+            border-radius: 20px;
+            margin-top: 15px;
+            display: inline-block;
+        }
+
+        .badge-pass { background-color: #26890c; color: white; }
+        .badge-fail { background-color: #e21b3c; color: white; }
+
+        .final-score-text {
+            font-size: 28px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.2);
+            padding: 15px 30px;
+            border-radius: 30px;
+        }
+
+        /* Admin / Analytics Screen */
+        #admin-screen {
+            background-color: #f2f2f2;
+            color: #333;
+            padding: 40px 20px;
+            justify-content: flex-start;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .chart-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            text-align: left;
+        }
+
+        .results-table th, .results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .results-table th {
+            background-color: #46178f;
+            color: white;
+        }
+
+        .text-pass { color: #26890c; font-weight: 800; }
+        .text-fail { color: #e21b3c; font-weight: 800; }
+    </style>
+</head>
+<body>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen active">
+        <div class="logo">Wyze Add-ons!</div>
+        <div class="subtitle">Cloud 60 & Billing Knowledge Check</div>
+        
+        <div class="input-group">
+            <input type="text" id="player-name" class="name-input" placeholder="Enter Your Name" maxlength="20">
+            <button class="btn-start" onclick="validateAndStart()">Play Now!</button>
+        </div>
+
+        <button class="btn-secondary" onclick="showDashboard()">📊 View Results & Analytics</button>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="quiz-screen" class="screen">
+        <div class="quiz-header">
+            <div class="question-counter" id="question-counter">1 of 8</div>
+            
+            <div class="timer-container">
+                <svg class="timer-circle" viewBox="0 0 60 60">
+                    <circle class="timer-bg" cx="30" cy="30" r="26"></circle>
+                    <circle class="timer-prog" id="timer-path" cx="30" cy="30" r="26"></circle>
+                </svg>
+                <div class="timer-text" id="timer-text">20</div>
+            </div>
+
+            <div class="score-display">Score: <span id="score-val">0</span></div>
+        </div>
+
+        <div class="question-card">
+            <h2 class="question-text" id="question-text">Question goes here?</h2>
+        </div>
+
+        <div class="answers-grid" id="answers-grid"></div>
+    </div>
+
+    <!-- FEEDBACK OVERLAY -->
+    <div id="feedback-overlay">
+        <div class="feedback-title" id="feedback-title">Correct!</div>
+        <div class="feedback-score" id="feedback-points">+850 points</div>
+        <div class="feedback-rationale" id="feedback-rationale">Explanation goes here.</div>
+        <button class="btn-next" onclick="nextQuestion()">Next</button>
+    </div>
+
+    <!-- RESULTS SCREEN -->
+    <div id="results-screen" class="screen">
+        <div class="logo">Quiz Complete</div>
+        <div id="pass-status-badge" class="status-badge">PASS</div>
+
+        <div class="final-score-text">
+            Player: <strong id="summary-player-name">User</strong><br>
+            Final Score: <span id="final-score-val">0</span><br>
+            <span style="font-size: 20px; font-weight: 400;" id="final-stats">0/8 Correct</span>
+        </div>
+
+        <div style="display: flex; gap: 15px;">
+            <button class="btn-start" onclick="location.reload()">Play Again</button>
+            <button class="btn-start" style="background-color: #1368ce;" onclick="showDashboard()">Analytics</button>
+        </div>
+    </div>
+
+    <!-- DASHBOARD / ANALYTICS SCREEN -->
+    <div id="admin-screen" class="screen">
+        <div class="dashboard-container">
+            <h2>📊 Overall Quiz Results</h2>
+            
+            <div class="chart-section">
+                <canvas id="passFailChart"></canvas>
+            </div>
+
+            <h3>Detailed Player Log</h3>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Name</th>
+                        <th>Score</th>
+                        <th>Accuracy</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="results-table-body">
+                    <!-- Dynamic Data Rows -->
+                </tbody>
+            </table>
+
+            <div style="margin-top: 30px; text-align: center;">
+                <button class="btn-start" onclick="switchScreen('start-screen')">Back to Main Menu</button>
+                <button class="btn-secondary" style="color:#333; border-color:#333;" onclick="clearAllData()">Clear Saved Data</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                question: "What is required before you can attach the Cloud 60 add-on to a camera?",
+                options: ["A brand new camera model.", "An active Cam Plus or Cam Unlimited plan.", "A pre-paid annual subscription.", "An empty microSD card."],
+                correctIndex: 1,
+                rationale: "Add-ons can't exist on their own; you need an active parent plan (Cam Plus or Cam Unlimited) on the device first."
+            },
+            {
+                question: "How does the billing date for a new add-on work?",
+                options: ["It bills on the 1st of every month.", "It bills independently on the day you bought it.", "It aligns to bill on the same day as your base Wyze plan.", "It only bills annually."],
+                correctIndex: 2,
+                rationale: "Add-ons are designed to align with your current Wyze plan's billing date, often using a prorated first charge to sync up."
+            },
+            {
+                question: "If a user upgrades to Cam Unlimited Pro, what happens to their separate Cloud 60 add-on?",
+                options: ["It converts to a CVR plan.", "It should stop renewing.", "They receive a cash refund immediately.", "It is automatically moved to a different camera."],
+                correctIndex: 1,
+                rationale: "Cloud 60 is included in Cam Unlimited Pro, so the separate paid add-on becomes redundant and should stop renewing."
+            },
+            {
+                question: "Can a customer move their Cloud 60 subscription directly to a different camera?",
+                options: ["Yes, by dragging it in the app.", "Yes, but only via Support.", "No, they must cancel it and buy a new one for the desired device.", "No, add-ons are permanently locked to the first device."],
+                correctIndex: 2,
+                rationale: "At launch, there is no direct move operation. The expected flow is to cancel the add-on on the old device and purchase a new one."
+            },
+            {
+                question: "Cloud 60 is a monthly subscription. Is there an annual option available?",
+                options: ["Yes, it's cheaper annually.", "Yes, but only if the base plan is annual.", "No, it is monthly-only at launch.", "Only for Cam Unlimited users."],
+                correctIndex: 2,
+                rationale: "Cloud 60 (and add-ons generally at launch) are strictly monthly, even if the parent base plan is billed annually."
+            },
+            {
+                question: "If a base plan is billed by Apple/Google, how is the Cloud 60 add-on billed?",
+                options: ["Apple/Google bills both on one receipt.", "It cannot be purchased.", "Wyze/Stripe bills the add-on separately.", "It is included for free."],
+                correctIndex: 2,
+                rationale: "The app store continues billing the base plan, while Wyze (via Stripe) handles the separate add-on billing, resulting in two receipts."
+            },
+            {
+                question: "Can Cloud 60 recover events that were deleted after 14 days, before the add-on was purchased?",
+                options: ["Yes, it recovers the last 60 days instantly.", "Yes, if requested through Support.", "No, Cloud 60 is not retroactive.", "Only if there is a microSD card installed."],
+                correctIndex: 2,
+                rationale: "Cloud 60 is not retroactive. It cannot recover older events that were already purged under the standard 14-day policy prior to activation."
+            },
+            {
+                question: "Can a user purchase Cloud 60 for a camera that is shared with them by another user?",
+                options: ["Yes, anyone with access can add features.", "No, the purchasing user must be the primary owner.", "Yes, but only via the web portal.", "No, shared cameras do not support any cloud features."],
+                correctIndex: 1,
+                rationale: "The purchasing customer must be the camera's primary owner. A camera shared with the signed-in user is not eligible."
+            }
+        ];
+
+        // State variables
+        let playerName = "";
+        let currentQIndex = 0;
+        let totalScore = 0;
+        let correctCount = 0;
+        let timerInterval;
+        let timeLeft = 20;
+        const TIME_LIMIT = 20;
+        const PASSING_THRESHOLD = 6; // 6 out of 8 correct needed to pass (75%)
+        let isAnswering = false;
+        let chartInstance = null;
+
+        // DOM Elements
+        const screens = document.querySelectorAll('.screen');
+        const questionText = document.getElementById('question-text');
+        const answersGrid = document.getElementById('answers-grid');
+        const qCounter = document.getElementById('question-counter');
+        const scoreVal = document.getElementById('score-val');
+        
+        const timerText = document.getElementById('timer-text');
+        const timerPath = document.getElementById('timer-path');
+        const timerContainer = document.querySelector('.timer-container');
+
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackPoints = document.getElementById('feedback-points');
+        const feedbackRationale = document.getElementById('feedback-rationale');
+
+        function switchScreen(screenId) {
+            screens.forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function validateAndStart() {
+            const input = document.getElementById('player-name').value.trim();
+            if (!input) {
+                alert("Please enter your name to start the quiz.");
+                return;
+            }
+            playerName = input;
+            startQuiz();
+        }
+
+        function startQuiz() {
+            currentQIndex = 0;
+            totalScore = 0;
+            correctCount = 0;
+            scoreVal.innerText = '0';
+            switchScreen('quiz-screen');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswering = false;
+            const q = quizData[currentQIndex];
+            
+            qCounter.innerText = `${currentQIndex + 1} of ${quizData.length}`;
+            questionText.innerText = q.question;
+
+            answersGrid.innerHTML = '';
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `answer-btn btn-color-${idx}`;
+                btn.innerHTML = `<div class="shape-icon shape-${idx}"></div> ${opt}`;
+                btn.onclick = () => handleAnswer(idx);
+                answersGrid.appendChild(btn);
+            });
+
+            startTimer();
+        }
+
+        function startTimer() {
+            timeLeft = TIME_LIMIT;
+            updateTimerUI();
+            timerContainer.classList.remove('timer-urgent');
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+
+                if (timeLeft <= 5) {
+                    timerContainer.classList.add('timer-urgent');
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleAnswer(-1);
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            timerText.innerText = timeLeft;
+            const maxDash = 163;
+            const percentage = timeLeft / TIME_LIMIT;
+            const offset = maxDash - (percentage * maxDash);
+            timerPath.style.strokeDashoffset = offset;
+        }
+
+        function handleAnswer(selectedIndex) {
+            if (isAnswering) return;
+            isAnswering = true;
+            clearInterval(timerInterval);
+
+            const q = quizData[currentQIndex];
+            const isCorrect = selectedIndex === q.correctIndex;
+            let pointsEarned = 0;
+
+            const btns = document.querySelectorAll('.answer-btn');
+            btns.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx !== q.correctIndex && idx !== selectedIndex) {
+                    btn.style.filter = 'grayscale(80%) opacity(0.5)';
+                }
+            });
+
+            if (isCorrect) {
+                pointsEarned = Math.round((timeLeft / TIME_LIMIT) * 500) + 500; 
+                totalScore += pointsEarned;
+                correctCount++;
+                scoreVal.innerText = totalScore;
+                showFeedback('correct', pointsEarned, q.rationale);
+            } else if (selectedIndex === -1) {
+                showFeedback('timeout', 0, q.rationale);
+            } else {
+                showFeedback('incorrect', 0, q.rationale);
+            }
+        }
+
+        function showFeedback(type, points, rationale) {
+            feedbackOverlay.className = '';
+            feedbackOverlay.style.display = 'flex';
+            feedbackRationale.innerText = rationale;
+
+            if (type === 'correct') {
+                feedbackOverlay.classList.add('correct-bg');
+                feedbackTitle.innerText = "Correct!";
+                feedbackPoints.innerText = `+${points} points`;
+                feedbackPoints.style.display = 'block';
+            } else if (type === 'incorrect') {
+                feedbackOverlay.classList.add('incorrect-bg');
+                feedbackTitle.innerText = "Incorrect!";
+                feedbackPoints.style.display = 'none';
+            } else {
+                feedbackOverlay.classList.add('time-up-bg');
+                feedbackTitle.innerText = "Time's Up!";
+                feedbackPoints.style.display = 'none';
+            }
+        }
+
+        function nextQuestion() {
+            feedbackOverlay.style.display = 'none';
+            currentQIndex++;
+            
+            if (currentQIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            switchScreen('results-screen');
+            const passed = correctCount >= PASSING_THRESHOLD;
+
+            // Save attempt to LocalStorage
+            saveAttemptData(playerName, totalScore, correctCount, quizData.length, passed);
+
+            // UI updates
+            document.getElementById('summary-player-name').innerText = playerName;
+            document.getElementById('final-score-val').innerText = totalScore;
+            document.getElementById('final-stats').innerText = `${correctCount} out of ${quizData.length} Correct (${Math.round((correctCount/quizData.length)*100)}%)`;
+
+            const badge = document.getElementById('pass-status-badge');
+            if (passed) {
+                badge.innerText = "PASSED";
+                badge.className = "status-badge badge-pass";
+            } else {
+                badge.innerText = "FAILED";
+                badge.className = "status-badge badge-fail";
+            }
+        }
+
+        function saveAttemptData(name, score, correct, total, passed) {
+            const history = JSON.parse(localStorage.getItem('wyzeQuizResults') || '[]');
+            const record = {
+                name: name,
+                score: score,
+                correct: correct,
+                total: total,
+                passed: passed,
+                date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+            history.push(record);
+            localStorage.setItem('wyzeQuizResults', JSON.stringify(history));
+        }
+
+        function showDashboard() {
+            switchScreen('admin-screen');
+            renderAnalytics();
+        }
+
+        function renderAnalytics() {
+            const history = JSON.parse(localStorage.getItem('wyzeQuizResults') || '[]');
+            const tableBody = document.getElementById('results-table-body');
+            tableBody.innerHTML = '';
+
+            let passCount = 0;
+            let failCount = 0;
+
+            if (history.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No quiz results recorded yet.</td></tr>`;
+            } else {
+                // Populate Table (Most recent attempts first)
+                history.slice().reverse().forEach(entry => {
+                    if (entry.passed) passCount++; else failCount++;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${entry.date}</td>
+                        <td><strong>${entry.name}</strong></td>
+                        <td>${entry.score}</td>
+                        <td>${entry.correct}/${entry.total} (${Math.round((entry.correct/entry.total)*100)}%)</td>
+                        <td class="${entry.passed ? 'text-pass' : 'text-fail'}">${entry.passed ? 'PASS' : 'FAIL'}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+
+            // Render Chart
+            const ctx = document.getElementById('passFailChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Passed', 'Failed'],
+                    datasets: [{
+                        data: [passCount, failCount],
+                        backgroundColor: ['#26890c', '#e21b3c'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: {
+                            display: true,
+                            text: `Total Attempts: ${history.length}`
+                        }
+                    }
+                }
+            });
+        }
+
+        function clearAllData() {
+            if (confirm("Are you sure you want to delete all saved test results?")) {
+                localStorage.removeItem('wyzeQuizResults');
+                renderAnalytics();
+            }
+        }
+    </script>
+</body>
+</html>
